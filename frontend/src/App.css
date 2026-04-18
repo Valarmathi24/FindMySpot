@@ -1,0 +1,95 @@
+/* --- GLOBAL RESET & CYBER CORE --- */
+:root {
+  --neon-green: #22c55e;
+  --cyber-blue: #3b82f6;
+  --deep-space: #020617;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  background-color: var(--deep-space);
+  color: #f8fafc;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left; /* Changed from center to allow for dashboard layouts */
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: start;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--deep-space);
+  overflow-x: hidden;
+}
+
+/* --- THE EYE-CAPTIVATING "GLOW" ANIMATIONS --- */
+@keyframes ambient-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* --- CUSTOM SCROLLBAR (CYBER STYLE) --- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--deep-space);
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
+}
+
+/* --- TYPOGRAPHY UTILITIES --- */
+.font-black-italic {
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+/* --- GLASSMORPHISM CLASS --- */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* --- FORM ELEMENT OVERRIDES --- */
+input, select, textarea {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input:focus {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  transform: translateY(-1px);
+}
+
+/* --- SELECTION COLOR --- */
+::selection {
+  background-color: rgba(34, 197, 94, 0.3);
+  color: #fff;
+}
