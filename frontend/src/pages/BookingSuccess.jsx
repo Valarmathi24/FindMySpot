@@ -1,39 +1,40 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, QrCode, Download, Calendar, Clock, ShoppingBag } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 export default function BookingSuccess() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (state) {
-      // --- EXISTING LOCALSTORAGE LOGIC ---
-      const existingBookings = JSON.parse(localStorage.getItem("myBookings") || "[]");
-      const isAlreadySaved = existingBookings.some(b => b.transactionId === state.transactionId);
-      
-      const newBooking = {
-        ...state,
+    if (!state) return;
+
+    const saveToSupabase = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const bookingDate = new Date().toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+      });
+
+      await supabase.from("bookings").upsert({
+        user_id: user.id,
+        transaction_id: state.transactionId || "TXN_" + Date.now(),
+        booking_date: bookingDate,
+        selected_slot: String(state.selectedSlot || ''),
+        lot_name: state.selectedLot?.name || '',
+        vehicle_id: state.vehicle?.vehicleId || '',
+        payment_type: state.paymentType || 'Online',
+        status: 'Paid',
+        start_time: state.startTime || '',
+        duration: state.duration ? `${state.duration}H` : '1H',
+        price: String(state.totalPrice || '0'),
         timestamp: new Date().toISOString(),
-        bookingDate: new Date().toLocaleDateString('en-US', { 
-          month: 'long', day: 'numeric', year: 'numeric' 
-        }),
-        status: 'Active'
-      };
+      }, { onConflict: 'transaction_id' });
+    };
 
-      if (!isAlreadySaved) {
-        localStorage.setItem("myBookings", JSON.stringify([newBooking, ...existingBookings]));
-
-        // --- NEW: SYNC TO ADMIN DB (POST REQUEST) ---
-        fetch("http://127.0.0.1:5000/api/sync_booking", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newBooking),
-        })
-        .then(res => res.json())
-        .catch(err => console.error("Admin Sync Error:", err));
-      }
-    }
+    saveToSupabase();
   }, [state]);
 
   if (!state) return (

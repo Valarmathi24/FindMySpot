@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { supabase } from "../services/supabase";
 
 function Login() {
   const { role } = useParams();
@@ -16,45 +17,39 @@ function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, role: role })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
       });
 
-      const data = await res.json();
+      if (error) {
+        alert(error.message || "Login failed");
+        return;
+      }
 
-      if (data.success) {
-        const emailKey = form.email.toLowerCase();
-        localStorage.setItem("userEmail", emailKey);
-        localStorage.setItem("userRole", role);
+      const emailKey = form.email.toLowerCase();
+      localStorage.setItem("userEmail", emailKey);
+      localStorage.setItem("userRole", role);
 
-        // --- PERSISTENCE LOGIC ---
-        // Check if this specific email already has a stored profile
-        const existingData = localStorage.getItem(`profile_${emailKey}`);
-        
-        if (!existingData) {
-          // If brand new user, initialize their specific storage slot
-          const newProfile = {
-            name: emailKey.split('@')[0],
-            phone: '',
-            dob: '',
-            gender: '',
-            state: '',
-            profilePic: null,
-            vehicleId: '',
-            vehicleType: 'car'
-          };
-          localStorage.setItem(`profile_${emailKey}`, JSON.stringify(newProfile));
-        }
+      const existingData = localStorage.getItem(`profile_${emailKey}`);
+      if (!existingData) {
+        const newProfile = {
+          name: emailKey.split('@')[0],
+          phone: '',
+          dob: '',
+          gender: '',
+          state: '',
+          profilePic: null,
+          vehicleId: '',
+          vehicleType: 'car'
+        };
+        localStorage.setItem(`profile_${emailKey}`, JSON.stringify(newProfile));
+      }
 
-        if (role === "admin") {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/dashboard");
-        }
+      if (role === "admin") {
+        navigate("/admin-dashboard");
       } else {
-        alert(data.message || "Login failed");
+        navigate("/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);

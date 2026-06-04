@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, CreditCard, Wallet, Smartphone, 
-  ShieldCheck, Banknote, AlertCircle, CheckCircle, Clock 
-} from 'lucide-react';
+import { ArrowLeft, CreditCard, Wallet, Smartphone, ShieldCheck, Banknote, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Clock } from 'lucide-react';
 
 export default function PaymentPage() {
   const { state } = useLocation();
@@ -56,9 +53,6 @@ export default function PaymentPage() {
       method: method === 'spot' ? 'Pay on Spot' : method,
       status: method === 'spot' ? 'Payment Pending' : 'Paid'
     };
-
-    const existingBookings = JSON.parse(localStorage.getItem("userBookings") || "[]");
-    localStorage.setItem("userBookings", JSON.stringify([newBooking, ...existingBookings]));
 
     if (method === 'spot') {
       navigate('/booking-receipt', { state: { booking: newBooking } });

@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, Printer, ArrowLeft, Home, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { CircleCheck as CheckCircle, Printer, ArrowLeft, Hop as Home, ShieldCheck, TriangleAlert as AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '../services/supabase';
 
 export default function BookingReceipt() {
   const { state } = useLocation();
@@ -32,24 +33,26 @@ export default function BookingReceipt() {
     valid: true
   });
 
-  const syncWithAdmin = async (bookingData) => {
-    try {
-      await fetch("http://127.0.0.1:5000/api/sync_booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookingData),
-      });
-    } catch (err) { console.error("Admin Sync Failed:", err); }
-  };
+  const saveBookingToSupabase = async (bookingData) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-  const saveBookingToVault = (bookingData) => {
-    const fullEmail = localStorage.getItem("userEmail") || "guest";
-    const storageKey = `${fullEmail.toLowerCase()}_myBookings`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    const alreadyExists = existing.some((b) => b.transactionId === bookingData.transactionId);
-    if (alreadyExists) return;
-    const updated = [{ ...bookingData, timestamp: new Date().toISOString() }, ...existing];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    const { error } = await supabase.from("bookings").upsert({
+      user_id: user.id,
+      transaction_id: bookingData.transactionId,
+      booking_date: bookingData.bookingDate || new Date().toLocaleString(),
+      selected_slot: bookingData.selectedSlot,
+      lot_name: bookingData.selectedLot?.name || '',
+      vehicle_id: bookingData.vehicle?.vehicleId || '',
+      payment_type: bookingData.paymentType,
+      status: bookingData.status,
+      start_time: booking.startTime || '',
+      duration: booking.duration || '1H',
+      price: String(booking.price || '0'),
+      timestamp: new Date().toISOString(),
+    }, { onConflict: 'transaction_id' });
+
+    if (error) console.error("Supabase save failed:", error);
   };
 
   useEffect(() => {
@@ -60,10 +63,9 @@ export default function BookingReceipt() {
       selectedLot: { name: booking.lotName },
       vehicle: { vehicleId: booking.vehicleId },
       paymentType: isSpotPayment ? "Pay On Spot" : "Online",
-      status: isSpotPayment ? "Payment Pending" : "Paid" // ✅ Correcting status for Admin
+      status: isSpotPayment ? "Payment Pending" : "Paid",
     };
-    saveBookingToVault(formattedBooking);
-    syncWithAdmin(formattedBooking); 
+    saveBookingToSupabase(formattedBooking);
   }, [booking, isSpotPayment]);
 
   return (

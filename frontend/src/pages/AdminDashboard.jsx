@@ -1,37 +1,44 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ShieldCheck, Activity, Users, Car, CheckCircle2, 
-  Camera, X, AlertCircle, ScanLine, Calendar, Clock 
-} from "lucide-react";
+import { ShieldCheck, Activity, Users, Car, CircleCheck as CheckCircle2, Camera, X, CircleAlert as AlertCircle, ScanLine, Calendar } from "lucide-react";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import { supabase } from "../services/supabase";
 
 export default function AdminDashboard() {
-  const [data, setData] = useState([]); // Sensor Data
-  const [userBookings, setUserBookings] = useState([]); // Real User Bookings
+  const [data, setData] = useState([]);
+  const [userBookings, setUserBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- Verification States ---
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState(null); 
+  const [scanResult, setScanResult] = useState(null);
 
   const fetchData = async () => {
-    try {
-      const sensorRes = await fetch("http://127.0.0.1:5000/api/dashboard");
-      const sensorResult = await sensorRes.json();
-      const formattedData = sensorResult.map(item => ({
-        ...item,
-        spot_map: typeof item.spot_map === 'string' ? JSON.parse(item.spot_map) : item.spot_map
-      }));
-      setData(formattedData);
+    const { data: records } = await supabase
+      .from("parking_records")
+      .select("*")
+      .order("timestamp", { ascending: false })
+      .limit(10);
 
-      const bookingRes = await fetch("http://127.0.0.1:5000/api/all_bookings");
-      const bookingResult = await bookingRes.json();
-      setUserBookings(bookingResult);
-      setLoading(false);
-    } catch (err) {
-      console.error("Fetch Error:", err);
+    if (records) setData(records);
+
+    const { data: bookingRows } = await supabase
+      .from("bookings")
+      .select("*")
+      .order("timestamp", { ascending: false });
+
+    if (bookingRows) {
+      setUserBookings(bookingRows.map(b => ({
+        transactionId: b.transaction_id,
+        bookingDate: b.booking_date,
+        selectedSlot: b.selected_slot,
+        selectedLot: { name: b.lot_name },
+        vehicle: { vehicleId: b.vehicle_id },
+        paymentType: b.payment_type,
+        status: b.status,
+      })));
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -41,17 +48,8 @@ export default function AdminDashboard() {
   }, []);
 
   const finalizeCheckIn = async (transactionId) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:5000/api/verify_checkin/${transactionId}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        setUserBookings(prev => prev.filter(b => b.transactionId !== transactionId));
-      }
-    } catch (err) {
-      console.error("Check-in sync failed:", err);
-      setUserBookings(prev => prev.filter(b => b.transactionId !== transactionId));
-    }
+    await supabase.from("bookings").delete().eq("transaction_id", transactionId);
+    setUserBookings(prev => prev.filter(b => b.transactionId !== transactionId));
   };
 
   useEffect(() => {
@@ -77,20 +75,37 @@ export default function AdminDashboard() {
         }
         setIsScanning(false);
         scanner.clear();
-      }, (err) => { });
+      }, () => {});
     }
     return () => { if (scanner) scanner.clear(); };
   }, [isScanning, userBookings]);
 
-  const latest = data[0] || { available_spaces: 0, occupied_spaces: 0 };
   const containerVars = { initial: { opacity: 0 }, animate: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVars = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
+
+  const handleDownloadReport = async () => {
+    const { data: records } = await supabase
+      .from("parking_records")
+      .select("*")
+      .order("timestamp", { ascending: false });
+
+    if (!records) return;
+    const rows = [["ID", "Available", "Occupied", "Timestamp"]];
+    records.forEach(r => rows.push([r.id, r.available_spaces, r.occupied_spaces, r.timestamp]));
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "parking_report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 p-6 md:p-12 relative overflow-hidden font-sans">
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Verification Modals remain identical to your previous logic */}
       <AnimatePresence>
         {isScanning && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -128,8 +143,6 @@ export default function AdminDashboard() {
       </AnimatePresence>
 
       <motion.div variants={containerVars} initial="initial" animate="animate" className="max-w-7xl mx-auto relative z-10">
-        
-        {/* Header */}
         <motion.div variants={itemVars} className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
           <div className="text-center md:text-left">
             <h1 className="text-5xl font-black tracking-tighter italic flex items-center gap-3 text-white leading-none">
@@ -142,17 +155,13 @@ export default function AdminDashboard() {
             <button onClick={() => setIsScanning(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all">
               <ScanLine size={18} /> VERIFY ENTRY
             </button>
-            <button onClick={() => window.location.href = "http://127.0.0.1:5000/api/download_report"} className="bg-green-500 hover:bg-green-400 text-[#0f172a] font-bold px-8 py-3 rounded-full transition-all">
-              DOWNLOAD REPORT →
+            <button onClick={handleDownloadReport} className="bg-green-500 hover:bg-green-400 text-[#0f172a] font-bold px-8 py-3 rounded-full transition-all">
+              DOWNLOAD REPORT
             </button>
           </div>
         </motion.div>
 
-        {/* Stats Section... same as before */}
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* SENSOR DATA TABLE - UPDATED DATE/TIME COLUMN */}
           <motion.div variants={itemVars} className="lg:col-span-7 bg-slate-900/40 border border-slate-800 rounded-[3rem] overflow-hidden">
             <div className="p-6 border-b border-slate-800 flex items-center gap-2">
               <Activity size={16} className="text-green-500" />
@@ -192,13 +201,12 @@ export default function AdminDashboard() {
             </div>
           </motion.div>
 
-          {/* USER VERIFICATION PANEL - UPDATED WITH DATE ICON */}
           <motion.div variants={itemVars} className="lg:col-span-5 bg-slate-900/40 border border-slate-800 rounded-[3rem] p-8 overflow-hidden">
             <div className="flex items-center gap-2 mb-8 text-blue-400">
               <Users size={18} />
               <h3 className="text-[10px] font-black uppercase tracking-widest">Live User Reservations</h3>
             </div>
-            <div className="space-y-4 h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-4 h-[500px] overflow-y-auto pr-2">
               {userBookings.map((booking) => {
                 const method = (booking.paymentType || "").trim().toLowerCase();
                 const isPayAtSpot = method === "pay on spot";
@@ -220,7 +228,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <h4 className="text-sm font-black text-white uppercase mb-2 tracking-tight italic">{booking.selectedLot?.name}</h4>
-                    
+
                     <div className="flex justify-between items-center pt-4 border-t border-white/5">
                       <div className="flex flex-col">
                         <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest">Plate</p>
@@ -236,6 +244,11 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+              {userBookings.length === 0 && !loading && (
+                <div className="text-center text-slate-600 text-xs font-bold uppercase tracking-widest py-20">
+                  No active reservations
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

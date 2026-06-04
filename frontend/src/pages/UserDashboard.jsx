@@ -1,10 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  MapPin, Car, Bike, Truck, CheckCircle, 
-  Save, LogOut, Loader2, ShoppingBag, Home, Settings, User, Camera, Calendar, Phone, Map
-} from 'lucide-react';
+import { MapPin, Car, Bike, Truck, CircleCheck as CheckCircle, Save, LogOut, Loader as Loader2, ShoppingBag, Hop as Home, Settings, User, Camera, Calendar, Phone, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../services/supabase';
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -63,8 +61,8 @@ export default function UserDashboard() {
     setShowProfileModal(false);
   };
 
-  // 4. Logout Logic: Only removes "Session" keys, keeps profile data safe
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userRole");
     navigate('/');

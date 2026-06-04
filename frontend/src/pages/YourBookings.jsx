@@ -1,26 +1,51 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  ClipboardList, ArrowLeft, Trash2, ShoppingBag, ExternalLink, X, 
-  Banknote, Smartphone, CreditCard, Wallet, ShieldCheck 
+import {
+  ClipboardList, ArrowLeft, Trash2, ShoppingBag, ExternalLink, X,
+  Banknote, Smartphone, CreditCard, Wallet, ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react'; // ✅ Import QR Generator
+import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '../services/supabase';
 
 const YourBookings = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const fullEmail = localStorage.getItem("userEmail") || "guest";
-  const userPrefix = fullEmail.toLowerCase();
-  const storageKey = `${userPrefix}_myBookings`;
+
+  const fetchBookings = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("timestamp", { ascending: false });
+
+    if (data) {
+      setBookings(data.map(b => ({
+        transactionId: b.transaction_id,
+        bookingDate: b.booking_date,
+        selectedSlot: b.selected_slot,
+        selectedLot: { name: b.lot_name },
+        vehicle: { vehicleId: b.vehicle_id },
+        paymentType: b.payment_type,
+        status: b.status,
+        timestamp: b.timestamp,
+        supabaseId: b.id,
+      })));
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const savedBookings = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    const sortedBookings = savedBookings.sort((a, b) => 
-      new Date(b.timestamp || 0) - new Date(a.timestamp || 0)
-    );
-    setBookings(sortedBookings);
-  }, [storageKey]);
+    fetchBookings();
+  }, []);
 
   const getStatus = (bookingDate) => {
     const today = new Date().setHours(0, 0, 0, 0);
@@ -37,16 +62,17 @@ const YourBookings = () => {
     return <Wallet size={14} className="text-slate-400" />;
   };
 
-  const removeBooking = (tid) => {
-    const currentBookings = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    const updated = currentBookings.filter(b => b.transactionId !== tid);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    setBookings(updated);
+  const removeBooking = async (tid) => {
+    await supabase.from("bookings").delete().eq("transaction_id", tid);
+    setBookings(prev => prev.filter(b => b.transactionId !== tid));
   };
 
-  const clearHistory = () => {
+  const clearHistory = async () => {
     if (window.confirm("Delete your personal vault history?")) {
-      localStorage.removeItem(storageKey);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("bookings").delete().eq("user_id", user.id);
+      }
       setBookings([]);
     }
   };
@@ -85,7 +111,12 @@ const YourBookings = () => {
         </header>
 
         <div className="space-y-6">
-          {bookings.length === 0 ? (
+          {loading ? (
+            <div className="p-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+               <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+               <p className="text-slate-500 font-bold uppercase tracking-widest">Loading your vault...</p>
+            </div>
+          ) : bookings.length === 0 ? (
             <div className="p-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
                <ClipboardList size={48} className="mx-auto mb-4 text-slate-800" />
                <p className="text-slate-500 font-bold uppercase tracking-widest">No private records found</p>

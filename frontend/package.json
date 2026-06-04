@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@supabase/supabase-js": "^2.106.2",
     "framer-motion": "^12.37.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.577.0",
+    "netlify-cli": "^26.1.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react'; // Import the QR Generator
-import { 
-  Loader2, ShieldCheck, AlertCircle, CheckCircle2, 
-  ArrowLeft, Smartphone, Lock, CreditCard, Wallet
-} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Loader as Loader2, ShieldCheck, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, ArrowLeft, Smartphone, Lock, CreditCard, Wallet } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 export default function SimulatedGateway() {
   const { state } = useLocation();
@@ -51,11 +49,11 @@ export default function SimulatedGateway() {
     setCardData({ ...cardData, expiry: value });
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (status === 'success') {
       const bookingId = `PK-${Math.floor(100000 + Math.random() * 900000)}`;
       const timestamp = new Date().toLocaleString();
-      
+
       const newBooking = {
         id: bookingId,
         date: timestamp,
@@ -68,9 +66,23 @@ export default function SimulatedGateway() {
         status: 'Paid'
       };
 
-      // Save to history
-      const existing = JSON.parse(localStorage.getItem("userBookings") || "[]");
-      localStorage.setItem("userBookings", JSON.stringify([newBooking, ...existing]));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("bookings").upsert({
+          user_id: user.id,
+          transaction_id: bookingId,
+          booking_date: timestamp,
+          selected_slot: String(selectedSlot || ''),
+          lot_name: selectedLot.name,
+          vehicle_id: vehicle.vehicleId,
+          payment_type: state.paymentMethod || 'Online',
+          status: 'Paid',
+          start_time: state.startTime || '',
+          duration: `${state.duration}H`,
+          price: String(totalPrice || '0'),
+          timestamp: new Date().toISOString(),
+        }, { onConflict: 'transaction_id' });
+      }
 
       navigate('/booking-receipt', { state: { booking: newBooking } });
     } else {

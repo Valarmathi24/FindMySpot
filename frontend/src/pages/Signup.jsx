@@ -1,29 +1,30 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-// Standard icons for auth providers
-import { FcGoogle } from "react-icons/fc"; 
+import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaMicrosoft } from "react-icons/fa";
+import { supabase } from "../services/supabase";
 
 function Signup() {
   const { role } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch("http://127.0.0.1:5000/api/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, role })
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
     });
-    
-    const data = await res.json();
-    if (data.success) {
-      alert("Account created!");
-      navigate(`/login/${role}`);
+    setLoading(false);
+
+    if (error) {
+      alert(error.message || "Signup failed");
     } else {
-      alert(data.message || "Signup failed");
+      alert("Account created! You can now log in.");
+      navigate(`/login/${role}`);
     }
   };
 
@@ -78,8 +79,8 @@ function Signup() {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-700 text-white text-sm focus:border-green-500 outline-none transition-all"
             />
-            <button type="submit" className="w-full bg-green-500 hover:bg-green-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95">
-              Create Account
+            <button type="submit" disabled={loading} className="w-full bg-green-500 hover:bg-green-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-50">
+              {loading ? "Creating..." : "Create Account"}
             </button>
           </form>
 
