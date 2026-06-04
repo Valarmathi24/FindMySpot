@@ -1,5 +1,4 @@
 import { Routes, Route } from "react-router-dom";
-import PasswordGate from "./components/PasswordGate";
 import Splash from "./pages/Splash";
 import RoleSelect from "./pages/RoleSelect";
 import Login from "./pages/Login";
@@ -18,25 +17,23 @@ import ContactUs from "./pages/ContactUs";
 
 function App() {
   return (
-    <PasswordGate>
-      <Routes>
-        <Route path="/" element={<Splash />} />
-        <Route path="/role" element={<RoleSelect />} />
-        <Route path="/login/:role" element={<Login />} />
-        <Route path="/signup/:role" element={<Signup />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/spot-selection/:locationId" element={<SpotSelection />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/nearby-parking" element={<NearbyParking />} />
-        <Route path="/simulated-gateway" element={<SimulatedGateway />} />
-        <Route path="/booking-success" element={<BookingSuccess />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/your-bookings" element={<YourBookings />} />
-        <Route path="/booking-receipt" element={<BookingReceipt />} />
-        <Route path="/contact-us" element={<ContactUs />} />
-      </Routes>
-    </PasswordGate>
+    <Routes>
+      <Route path="/" element={<Splash />} />
+      <Route path="/role" element={<RoleSelect />} />
+      <Route path="/login/:role" element={<Login />} />
+      <Route path="/signup/:role" element={<Signup />} />
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
+      <Route path="/dashboard" element={<UserDashboard />} />
+      <Route path="/spot-selection/:locationId" element={<SpotSelection />} />
+      <Route path="/payment" element={<PaymentPage />} />
+      <Route path="/nearby-parking" element={<NearbyParking />} />
+      <Route path="/simulated-gateway" element={<SimulatedGateway />} />
+      <Route path="/booking-success" element={<BookingSuccess />} />
+      <Route path="/services" element={<Services />} />
+      <Route path="/your-bookings" element={<YourBookings />} />
+      <Route path="/booking-receipt" element={<BookingReceipt />} />
+      <Route path="/contact-us" element={<ContactUs />} />
+    </Routes>
   );
 }
 
