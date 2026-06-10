@@ -6,7 +6,7 @@ from flask_bcrypt import Bcrypt
 import os
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = "my_secret_key"
 bcrypt = Bcrypt(app)
 
 # Allow React frontend to connect
@@ -21,7 +21,7 @@ def get_db_connection():
     db = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="Nagavalar@123"
+        password="my_password"
     )
     cursor = db.cursor()
     cursor.execute("CREATE DATABASE IF NOT EXISTS parking_system")
@@ -31,7 +31,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="Nagavalar@123",
+        password="my_password",
         database="parking_system"
     )
 
